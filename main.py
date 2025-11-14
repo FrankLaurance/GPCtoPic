@@ -38,7 +38,7 @@ def open_folder(path):
 start_time = time.time()
 st.set_page_config(
     page_title='PPR_DATA_PAGE',
-    page_icon='sinopec.jpg',
+    page_icon='main.ico',
     layout='wide',
     initial_sidebar_state = "collapsed"
 )
