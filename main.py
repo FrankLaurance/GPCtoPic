@@ -8,9 +8,10 @@ import numpy as np
 # from plottable import Table, ColumnDefinition
 import glob
 import pandas as pd
-from typing import List
+from typing import List, Optional
 import platform
 import subprocess
+import json
 
 # 设置 matplotlib 后端为 Agg (非交互式),减少依赖
 os.environ['MPLBACKEND'] = 'Agg'
@@ -38,7 +39,7 @@ def open_folder(path):
 start_time = time.time()
 st.set_page_config(
     page_title='PPR_DATA_PAGE',
-    page_icon='main.ico',
+    page_icon='sinopec.jpg',
     layout='wide',
     initial_sidebar_state = "collapsed"
 )
@@ -53,7 +54,8 @@ class MolecularWeightAnalyzer():
         self.data_path = os.path.join(self.rootdir, "datapath")
         self.output_dir = os.path.join(self.rootdir, "Mw_output")
         self.setting_dir = os.path.join(self.rootdir, "setting")
-        self.file_list : List[str] = None
+        self.file_list : Optional[List[str]] = None
+        self._cached_file_list : Optional[List[str]] = None  # Cache for file list
         # self.heads = {}  # 变量名
         self.lines = []  # raw data 读文件用
         self.selected_file = None
@@ -117,24 +119,39 @@ class MolecularWeightAnalyzer():
         self.mw = None
 
     def clear_dir(self):
+        """清空输出目录"""
         if not os.path.exists(self.output_dir):
             return
-        for dir in os.listdir(self.output_dir):
-            os.remove(os.path.join(self.output_dir, dir))
+        for filename in os.listdir(self.output_dir):
+            file_path = os.path.join(self.output_dir, filename)
+            try:
+                if os.path.isfile(file_path):
+                    os.remove(file_path)
+            except Exception as e:
+                st.warning(f"删除文件失败 {filename}: {e}")
 
     def check_dir(self) -> bool:
-        """检查输出目录中是否存在同名文件"""
+        """检查输出目录中是否存在同名文件
+        
+        Returns:
+            bool: 存在同名文件返回True
+        """
         for file in self.selected_file:
             if os.path.exists(os.path.join(self.output_dir, file.split('.')[0] + '.png')):
                 return True
         return False    
 
-    def setting_list(self):
+    def setting_list(self) -> List[str]:
+        """获取所有设置文件列表
+        
+        Returns:
+            设置文件名列表
+        """
         return [os.path.basename(i) for i in glob.glob(os.path.join(self.setting_dir, "*.ini"))]
 
     def save_setting(self, new_setting_name = '') -> None:
-        """保存当前设置到文件"""
-        with open(os.path.join(self.setting_dir, new_setting_name), 'w') as f:
+        """保存当前设置到文件（使用JSON格式）"""
+        try:
             setting = {"segmentpos": self.selectedpos,
                         "bar_color" : self.bar_color,
                         "mw_color" : self.mw_color,
@@ -147,96 +164,150 @@ class MolecularWeightAnalyzer():
                         "draw_bar" : self.draw_bar,
                         "draw_mw" : self.draw_mw,
                         "draw_table" : self.draw_table}
-                
-            print(setting, end = '', file = f)
+            
+            with open(os.path.join(self.setting_dir, new_setting_name), 'w', encoding='utf-8') as f:
+                json.dump(setting, f, indent=2, ensure_ascii=False)
+            
             st.session_state["segmentpos"] = self.selectedpos
             st.session_state["selectedpos"] = self.selectedpos
+        except Exception as e:
+            st.error(f"保存设置失败: {e}")
                         
-    def delete_setting(self, settingname):
-        """删除指定的设置文件"""
+    def delete_setting(self, settingname: str) -> None:
+        """删除指定的设置文件
+        
+        Args:
+            settingname: 要删除的设置文件名
+        """
         os.remove(os.path.join(self.setting_dir, settingname))
         if len(os.listdir(self.setting_dir)) == 0:
             self.default_setting()
             
-    def default_setting(self):
+    def default_setting(self) -> dict:
+        """创建并保存默认设置（使用JSON格式）
+        
+        Returns:
+            默认设置字典
+        """
         setting_name = DEFAULT_SETTING_NAME
         st.session_state["settingname"] = self.setting_name
-        bar_color = DEFAULT_BAR_COLOR
-        mw_color = DEFAULT_MW_COLOR
-        bar_width = 1.2
-        line_width = 1.0
-        axis_width = 1.0
-        title_font_size = 20
-        axis_font_size = 14
-        draw_bar = True
-        draw_mw = True
-        draw_table = True
-        transparent_back = DEFAULT_TRANSPARENT_BACK
-        segmentpos = [0, 5000, 10000, 50000, 100000, 500000, 1000000, 5000000, 10000000]
+        segmentpos = [0, 5000, 10000, 50000, 100000, 500000, 1000000, 5000000, 10000000, 50000000]
         st.session_state["segmentpos"] = segmentpos
         st.session_state["selectedpos"] = segmentpos
         
-        with open(os.path.join(self.setting_dir, setting_name), 'w') as f:
-                segmentpos = [0, 5000, 10000, 50000, 100000, 500000, 1000000, 5000000, 10000000, 50000000]
-                setting = {"segmentpos": segmentpos,
-                           "barColor" : bar_color,
-                            "MwColor" : mw_color,
-                            "transparentBack" : transparent_back,
-                            "barWidth" : bar_width,
-                            "lineWidth" : line_width,
-                            "axisWidth" : axis_width,
-                            "titleFontSize" : title_font_size,
-                            "axisFontSize" : axis_font_size,
-                            "drawBar" : draw_bar,
-                            "drawMw" : draw_mw,
-                            "drawTable" : draw_table}
-                print(setting, end = '', file = f)
+        # 初始化实例属性
+        self.bar_color = DEFAULT_BAR_COLOR
+        self.mw_color = DEFAULT_MW_COLOR
+        self.transparent_back = DEFAULT_TRANSPARENT_BACK
+        self.bar_width = 1.2
+        self.line_width = 1.0
+        self.axis_width = 1.0
+        self.title_font_size = 20
+        self.axis_font_size = 14
+        self.draw_bar = True
+        self.draw_mw = True
+        self.draw_table = True
+        
+        setting = {"segmentpos": segmentpos,
+                   "bar_color" : self.bar_color,
+                   "mw_color" : self.mw_color,
+                   "transparent_back" : self.transparent_back,
+                   "bar_width" : self.bar_width,
+                   "line_width" : self.line_width,
+                   "axis_width" : self.axis_width,
+                   "title_font_size" : self.title_font_size,
+                   "axis_font_size" : self.axis_font_size,
+                   "draw_bar" : self.draw_bar,
+                   "draw_mw" : self.draw_mw,
+                   "draw_table" : self.draw_table}
+        
+        try:
+            with open(os.path.join(self.setting_dir, setting_name), 'w', encoding='utf-8') as f:
+                json.dump(setting, f, indent=2, ensure_ascii=False)
+        except Exception as e:
+            st.error(f"创建默认设置失败: {e}")
+        
         return setting
         
     def read_setting(self, settingname = '') -> dict:
         """读取设置文件，兼容旧键名和新键名"""
         if os.path.exists(os.path.join(self.setting_dir, self.setting_name)):
-            with open(os.path.join(self.setting_dir, self.setting_name)) as f:
-                setting = eval(f.read())
-            # 兼容旧键名（驼峰）和新键名（下划线）
-            self.bar_color = setting.get("bar_color", setting.get("barColor", DEFAULT_BAR_COLOR))
-            self.mw_color = setting.get("mw_color", setting.get("MwColor", DEFAULT_MW_COLOR))
-            self.bar_width = setting.get("bar_width", setting.get("barWidth", 1.2))
-            self.line_width = setting.get("line_width", setting.get("lineWidth", 1.0))
-            self.axis_width = setting.get("axis_width", setting.get("axisWidth", 1.0))
-            self.title_font_size = setting.get("title_font_size", setting.get("titleFontSize", 20))
-            self.axis_font_size = setting.get("axis_font_size", setting.get("axisFontSize", 14))
-            self.draw_bar = setting.get("draw_bar", setting.get("drawBar", True))
-            self.draw_mw = setting.get("draw_mw", setting.get("drawMw", True))
-            self.draw_table = setting.get("draw_table", setting.get("drawTable", True))
-            self.transparent_back = setting.get("transparent_back", setting.get("transparentBack", DEFAULT_TRANSPARENT_BACK))
+            try:
+                with open(os.path.join(self.setting_dir, self.setting_name), 'r', encoding='utf-8') as f:
+                    content = f.read().strip()
+                    # 尝试JSON格式（新格式）
+                    try:
+                        setting = json.loads(content)
+                    except json.JSONDecodeError:
+                        # 兼容旧格式：使用ast.literal_eval代替eval
+                        import ast
+                        setting = ast.literal_eval(content)
+                # 兼容旧键名（驼峰）和新键名（下划线）
+                self.bar_color = setting.get("bar_color", setting.get("barColor", DEFAULT_BAR_COLOR))
+                self.mw_color = setting.get("mw_color", setting.get("MwColor", DEFAULT_MW_COLOR))
+                self.bar_width = setting.get("bar_width", setting.get("barWidth", 1.2))
+                self.line_width = setting.get("line_width", setting.get("lineWidth", 1.0))
+                self.axis_width = setting.get("axis_width", setting.get("axisWidth", 1.0))
+                self.title_font_size = setting.get("title_font_size", setting.get("titleFontSize", 20))
+                self.axis_font_size = setting.get("axis_font_size", setting.get("axisFontSize", 14))
+                self.draw_bar = setting.get("draw_bar", setting.get("drawBar", True))
+                self.draw_mw = setting.get("draw_mw", setting.get("drawMw", True))
+                self.draw_table = setting.get("draw_table", setting.get("drawTable", True))
+                self.transparent_back = setting.get("transparent_back", setting.get("transparentBack", DEFAULT_TRANSPARENT_BACK))
+            except Exception as e:
+                st.warning(f"读取设置文件失败: {e}，使用默认设置")
+                setting = self.default_setting()
         else:
             os.makedirs(self.setting_dir, exist_ok=True)
             setting = self.default_setting()
         return setting
     
-    def change_setting(self, settingname):
-        """切换到指定的设置"""
+    def change_setting(self, settingname: str) -> None:
+        """切换到指定的设置
+        
+        Args:
+            settingname: 设置文件名
+        """
         st.session_state["settingname"] = self.setting_name
         return
 
-    def add_region(self, new_region):
-        # print(new_region, type(new_region))
+    def add_region(self, new_region: int) -> None:
+        """添加新的分子量区间分割点
+        
+        Args:
+            new_region: 新的分割点值
+        """
         self.segmentpos.append(new_region)
         self.segmentpos.sort()
     
-    def read_file(self, name):
+    def read_file(self, name: str) -> bool:
+        """读取数据文件
+        
+        Args:
+            name: 文件名
+            
+        Returns:
+            bool: 读取成功返回True，失败返回False
+        """
         self.reset()
         file_path = os.path.join(self.data_path, name)
-        with open(file_path, "r", newline="", encoding = "ascii") as file:
-            # print(chardet.detect(file.read()))
-            for line in file.readlines():
-                line = line.strip()
-                if len(line) == 0:
-                    continue
-                self.lines.append(line)
-            return True
-        return False
+        try:
+            with open(file_path, "r", newline="", encoding="ascii") as file:
+                for line in file.readlines():
+                    line = line.strip()
+                    if len(line) == 0:
+                        continue
+                    self.lines.append(line)
+                return True
+        except FileNotFoundError:
+            st.error(f"文件未找到: {name}")
+            return False
+        except UnicodeDecodeError:
+            st.error(f"文件编码错误: {name}，请确保文件为ASCII编码")
+            return False
+        except Exception as e:
+            st.error(f"读取文件失败 {name}: {e}")
+            return False
         
     def preprocess(self):
         """预处理数据文件，提取分子量和峰数据"""
@@ -280,12 +351,25 @@ class MolecularWeightAnalyzer():
             peak.append(line_parts)
         self.peak_data = peak_all
 
-    def transform_number(self, num) -> str:
+    def transform_number(self, num: float) -> str:
+        """将数字转换为科学记数法格式
+        
+        Args:
+            num: 要转换的数字
+            
+        Returns:
+            科学记数法字符串
+        """
         dig = len(str(num)) - 1
         front = num / (10 ** dig)
         return '{:.1f} × 10$^{}$'.format(front, dig)
     
-    def start_width(self):
+    def start_width(self) -> int:
+        """计算起始宽度
+        
+        Returns:
+            宽度值
+        """
         return (len(str(self.segmentpos[1])) - 2) * 2
     
     def draw_image(self):
@@ -293,8 +377,6 @@ class MolecularWeightAnalyzer():
         import matplotlib.pyplot as plt
         import matplotlib.gridspec as gridspec
         from plottable import Table, ColumnDefinition
-        
-        plt.cla()
         # 预处理
         # data = np.stack([self.mw, self.norm], axis = 1)
         result_name = self.filename.split('.')[0]
@@ -401,12 +483,27 @@ class MolecularWeightAnalyzer():
     def output_data(self):
         column = ["Samplename", "Mp", "Mn", "Mw", "Mz", "Mz+1", "Mv",  "PD"]
 
-    def read_file_list(self):
-        """读取数据目录中的所有.rst文件列表"""
-        return [os.path.basename(i) for i in glob.glob(os.path.join(self.data_path, "*.rst"))]
+    def read_file_list(self, force_refresh: bool = False) -> List[str]:
+        """读取数据目录中的所有.rst文件列表（带缓存）
+        
+        Args:
+            force_refresh: 强制刷新缓存
+            
+        Returns:
+            文件名列表
+        """
+        if self._cached_file_list is None or force_refresh:
+            self._cached_file_list = [os.path.basename(i) for i in glob.glob(os.path.join(self.data_path, "*.rst"))]
+        return self._cached_file_list
 
-    def run(self):
-        """运行分析流程"""
+    def run(self) -> bool:
+        """运行分析流程
+        
+        处理所有选中的文件，生成分子量分布图
+        
+        Returns:
+            bool: 成功返回True
+        """
         if len(self.selected_file) == 0:
             # self.file_list = glob.glob(os.path.join(self.data_path, "*.rst"))
             st.warning("没有选中文件")
@@ -466,28 +563,55 @@ class GPCAnalyzer():
         self.peak_data = {}
 
     def clear_dir(self):
+        """清空输出目录"""
         if not os.path.exists(self.output_dir):
             return
-        for dir in os.listdir(self.output_dir):
-            os.remove(os.path.join(self.output_dir, dir))
+        for filename in os.listdir(self.output_dir):
+            file_path = os.path.join(self.output_dir, filename)
+            try:
+                if os.path.isfile(file_path):
+                    os.remove(file_path)
+            except Exception as e:
+                st.warning(f"删除文件失败 {filename}: {e}")
 
-    def check_dir(self):
+    def check_dir(self) -> bool:
+        """检查输出目录中是否存在同名文件
+        
+        Returns:
+            bool: 存在同名文件返回True
+        """
         if os.path.exists(os.path.join(self.output_dir, self.output_filename + '.csv')) or os.path.exists(os.path.join(self.output_dir, self.output_filename + '.png')):
             return True
         return False    
 
-    def read_file(self, name):
+    def read_file(self, name: str) -> bool:
+        """读取数据文件
+        
+        Args:
+            name: 文件名
+            
+        Returns:
+            bool: 读取成功返回True，失败返回False
+        """
         self.reset()
         file_path = os.path.join(self.data_path, name)
-        with open(file_path, "r", newline="", encoding = "ascii") as file:
-            # print(chardet.detect(file.read()))
-            for line in file.readlines():
-                line = line.strip()
-                if len(line) == 0:
-                    continue
-                self.lines.append(line)
-            return True
-        return False
+        try:
+            with open(file_path, "r", newline="", encoding="ascii") as file:
+                for line in file.readlines():
+                    line = line.strip()
+                    if len(line) == 0:
+                        continue
+                    self.lines.append(line)
+                return True
+        except FileNotFoundError:
+            st.error(f"文件未找到: {name}")
+            return False
+        except UnicodeDecodeError:
+            st.error(f"文件编码错误: {name}，请确保文件为ASCII编码")
+            return False
+        except Exception as e:
+            st.error(f"读取文件失败 {name}: {e}")
+            return False
         
     def preprocess(self):
         """预处理数据文件，提取分子量和峰数据"""
@@ -532,8 +656,6 @@ class GPCAnalyzer():
     def draw_image(self):
         # 延迟导入 matplotlib,减少启动时间和打包体积
         import matplotlib.pyplot as plt
-        
-        plt.cla()
         fig = plt.figure(dpi = 300, figsize = (16, 8))
         label = []
         for num, (name, data) in enumerate(self.peak_data.items()):
@@ -666,6 +788,8 @@ with Mw_ui:
     # mw.output_filename = st.text_input("输出文件名", value = mw.selectedFile[:-4], max_chars = 100, key = "output_filename_mw", disabled = not (saveFile or savePic))
     run_mw_col, openDir_mw_col, infoBar_mw_col, *_ = st.columns(spec = 8)
     
+    # 初始化进度条变量
+    progressBar_mw = st.empty()
     
     overlayFile_mw = True
     if mw.check_dir():
@@ -674,7 +798,6 @@ with Mw_ui:
             st.warning("存在相同文件名文件")
 
     if run_mw_col.button("运行", key = "run_mw_col_mw", disabled = not overlayFile_mw):
-        progressBar_mw = st.empty()
         infoBar_mw = infoBar_mw_col.empty()
         result_mw = mw.run()
         infoBar_mw.text("完成！耗时{:.2f}s".format(time.time() - start_time))
@@ -682,8 +805,6 @@ with Mw_ui:
     if os.path.isdir(datapath_mw):
         if openDir_mw_col.button("打开目标文件夹", key = "openDir_mw_col_mw"):
             open_folder(mw.output_dir)
-    
-    progressBar_mw = st.empty()
 
 with gpc_ui:
     datapath_gpc = st.text_input("数据文件夹", value = default_dir, max_chars = 100, key = "datapath_gpc")
@@ -704,6 +825,10 @@ with gpc_ui:
     fileSelect_col = st.empty()
     run_gpc_col, openDir_gpc_col, infoBar_gpc_col, *_ = st.columns(spec = 8)
     gpc = GPCAnalyzer(datapath_gpc, output_filename, save_file, save_picture, display_mode, save_figure_file_gpc, test_mode = False)
+    
+    # 初始化进度条变量
+    progressBar_gpc = st.empty()
+    infoBar_gpc = st.empty()
 
     if selected:
         gpc.selected_file = fileSelect_col.multiselect("文件列表", gpc.read_file_list())
@@ -715,7 +840,6 @@ with gpc_ui:
             st.warning("存在相同文件名文件")  
 
     if run_gpc_col.button("运行", key = "run_gpc_col", disabled = not overlayFile):
-        progressBar_gpc = st.empty()
         infoBar_gpc = infoBar_gpc_col.empty()
         result_gpc = gpc.run()
         infoBar_gpc.text("完成！耗时{:.2f}s".format(time.time() - start_time))

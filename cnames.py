@@ -110,22 +110,5 @@ cnames = {
 'wheat':                '#F5DEB3',
 'white':                '#FFFFFF'}
 
-clist = ['#7FFFD4', '#0000FF', '#8A2BE2', '#A52A2A', '#DEB887', '#5F9EA0', '#7FFF00', '#D2691E', '#FF7F50', '#6495ED', '#DC143C', '#008B8B', '#B8860B', '#A9A9A9', '#006400', '#BDB76B', '#8B008B', '#556B2F', '#FF8C00', '#9932CC', '#8B0000', '#E9967A', '#8FBC8F', '#483D8B', '#2F4F4F', '#00CED1', '#9400D3', '#FF1493', '#00BFFF', '#696969', '#1E90FF', '#B22222', '#228B22', '#FF00FF', '#FFD700', '#DAA520', '#808080', '#008000', '#ADFF2F', '#FF69B4', '#CD5C5C', '#4B0082', '#7CFC00', '#ADD8E6', '#F08080', '#90EE90', '#D3D3D3', '#FFB6C1', '#FFA07A', '#20B2AA', '#87CEFA', '#778899', '#B0C4DE', '#00FF00', '#32CD32', '#FF00FF', '#800000', '#66CDAA', '#0000CD', '#BA55D3', '#9370DB', '#3CB371', '#7B68EE', '#00FA9A', '#48D1CC', '#C71585', '#191970', '#000080', '#808000', '#6B8E23', '#FFA500', '#FF4500', '#DA70D6', '#EEE8AA', '#98FB98', '#AFEEEE', '#DB7093', '#FFDAB9', '#CD853F', '#FFC0CB', '#DDA0DD', '#B0E0E6', '#800080', '#FF0000', '#BC8F8F', '#4169E1', '#8B4513', '#FA8072', '#FAA460', '#2E8B57', '#A0522D', '#C0C0C0', '#87CEEB', '#6A5ACD', '#708090', '#FFFAFA', '#00FF7F', '#4682B4', '#D2B48C', '#008080', '#D8BFD8', '#FF6347', '#40E0D0', '#EE82EE', '#F5DEB3', '#FFFFFF']
-
-# for i in cnames:
-#     clist.append(cnames[i])
-# # print(clist)
-# # print(len(clist[:20]))
-# start = 100
-# end = start + 10
-# print(clist[start:end])
-
-# import numpy as np
-# import matplotlib.pyplot as plt
-# x = np.array([i for i in range(len(clist[start:end]))])
-# y = np.ones_like(x)
-# plt.cla()
-# plt.plot(x, y)
-# for i in range(len(clist[start:end])):
-#     plt.scatter(x, y, s = 30, c = clist[start:end])
-# plt.show()
+# Generate color list from dictionary values (avoiding duplicates while preserving order)
+clist = list(dict.fromkeys(cnames.values()))
