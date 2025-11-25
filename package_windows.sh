@@ -551,7 +551,7 @@ Python Version: 3.11.9
 EOF
 
 # 创建使用说明
-cat > "$OUTPUT_DIR/$PACKAGE_NAME/USED_GUIDE.txt" << 'EOF'
+cat > "$OUTPUT_DIR/$PACKAGE_NAME/USER_GUIDE.txt" << 'EOF'
 GPCtoPic Windows 便携版使用说明
 ================================
 
