@@ -15,6 +15,10 @@ echo "步骤 2/6: 检查 Python 环境..."
 python --version
 which python
 
+# 获取版本号
+VERSION=$(grep 'APP_VERSION =' main.py | cut -d '"' -f 2)
+echo "检测到应用版本: $VERSION"
+
 # 3. 安装/更新 PyInstaller
 echo "步骤 3/6: 检查 PyInstaller..."
 pip show pyinstaller > /dev/null 2>&1
@@ -44,14 +48,17 @@ pyinstaller GPCtoPic.spec --clean
 # 6. 显示结果
 echo "步骤 6/6: 打包完成!"
 if [ -f "dist/GPCtoPic" ]; then
+    # 重命名为带版本号的文件
+    mv "dist/GPCtoPic" "dist/GPCtoPic_v${VERSION}"
+    
     echo "================================"
     echo "✅ 打包成功!"
-    echo "可执行文件: dist/GPCtoPic"
-    echo "文件大小: $(du -h dist/GPCtoPic | cut -f1)"
+    echo "可执行文件: dist/GPCtoPic_v${VERSION}"
+    echo "文件大小: $(du -h "dist/GPCtoPic_v${VERSION}" | cut -f1)"
     echo "================================"
     echo "运行方法:"
     echo "  cd dist"
-    echo "  ./GPCtoPic"
+    echo "  ./GPCtoPic_v${VERSION}"
     echo "================================"
 else
     echo "❌ 打包失败,请检查错误信息"

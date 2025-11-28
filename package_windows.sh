@@ -24,7 +24,15 @@ fi
 
 # 配置变量
 APP_NAME="GPCtoPic"
-VERSION="1.0"
+# 从 main.py 获取版本号
+VERSION=$(grep 'APP_VERSION =' main.py | cut -d '"' -f 2)
+if [ -z "$VERSION" ]; then
+    VERSION="1.0"
+    echo "Warning: Could not detect version from main.py, using default: $VERSION"
+else
+    echo "Detected version: $VERSION"
+fi
+
 PYTHON_VERSION="3.11.9"  # 使用稳定版本
 PYTHON_EMBED_URL="https://www.python.org/ftp/python/${PYTHON_VERSION}/python-${PYTHON_VERSION}-embed-amd64.zip"
 OUTPUT_DIR="dist_portable_windows"
@@ -546,7 +554,7 @@ Issue Reporting: Submit an issue on GitHub
 
 Version Information
 -------------------
-Application Version: 1.0
+Application Version: ${VERSION}
 Python Version: 3.11.9
 EOF
 

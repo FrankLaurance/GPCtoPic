@@ -13,6 +13,8 @@ import inspect
 if TYPE_CHECKING:
     from main import MolecularWeightAnalyzer, GPCAnalyzer, DSCAnalyzer
 
+from main import APP_VERSION
+
 # 全局变量
 i18n = get_i18n()
 
@@ -343,6 +345,7 @@ def render_sidebar() -> None:
         # 帮助信息
         with st.expander(t("help"), expanded=True):
             st.markdown(t("contact_info"))
+            st.markdown(f"Version: {APP_VERSION}")
 
 
 def render_app(DSCAnalyzerClass: type, GPCAnalyzerClass: type, MolecularWeightAnalyzerClass: type) -> None:

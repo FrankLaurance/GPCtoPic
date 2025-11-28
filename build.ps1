@@ -15,6 +15,16 @@ Write-Host "步骤 2/6: 检查 Python 环境..."
 python --version
 python -c "import sys; print(sys.executable)"
 
+# 获取版本号
+$versionLine = Get-Content "main.py" | Select-String 'APP_VERSION = "(.+)"'
+if ($versionLine -match 'APP_VERSION = "(.+)"') {
+    $VERSION = $matches[1]
+    Write-Host "检测到应用版本: $VERSION"
+} else {
+    $VERSION = "unknown"
+    Write-Host "未检测到版本号，使用默认值: $VERSION"
+}
+
 # 3. 安装/更新 PyInstaller
 Write-Host "步骤 3/6: 检查 PyInstaller..."
 $pyinstallerCheck = pip show pyinstaller 2>&1
@@ -44,15 +54,19 @@ pyinstaller GPCtoPic.spec --clean
 # 6. 显示结果
 Write-Host "步骤 6/6: 打包完成!"
 if (Test-Path "dist\GPCtoPic.exe") {
+    # 重命名为带版本号的文件
+    $newName = "GPCtoPic_v$VERSION.exe"
+    Rename-Item -Path "dist\GPCtoPic.exe" -NewName $newName
+    
     Write-Host "================================"
     Write-Host "✅ 打包成功!"
-    Write-Host "可执行文件: dist\GPCtoPic.exe"
-    $fileSize = (Get-Item "dist\GPCtoPic.exe").Length / 1MB
+    Write-Host "可执行文件: dist\$newName"
+    $fileSize = (Get-Item "dist\$newName").Length / 1MB
     Write-Host "文件大小: $([math]::Round($fileSize, 2)) MB"
     Write-Host "================================"
     Write-Host "运行方法:"
     Write-Host "  cd dist"
-    Write-Host "  .\GPCtoPic.exe"
+    Write-Host "  .\$newName"
     Write-Host "================================"
 } else {
     Write-Host "❌ 打包失败,请检查错误信息"
