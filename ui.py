@@ -5,15 +5,111 @@ UI模块 - 负责Streamlit界面的渲染和交互
 import streamlit as st
 import os
 import time
+import shutil
 from typing import TYPE_CHECKING
 from i18n import get_i18n, t
+import inspect
 
 if TYPE_CHECKING:
-    from main import MolecularWeightAnalyzer, GPCAnalyzer
+    from main import MolecularWeightAnalyzer, GPCAnalyzer, DSCAnalyzer
 
 # 全局变量
-start_time = time.time()
 i18n = get_i18n()
+
+
+def render_dsc_ui(default_dir: str, AnalyzerClass: type) -> None:
+    """渲染DSC分析UI标签页
+    
+    Args:
+        default_dir: 默认数据目录
+        AnalyzerClass: DSC分析器类
+    """
+    
+    datapath_dsc = st.text_input(t("data_folder"), value=default_dir, placeholder=t("data_folder"), key="datapath_dsc")
+    if not os.path.isdir(datapath_dsc):
+        st.warning(t("invalid_path"))
+        
+    # 参数选择
+    saveSegMode_col, drawSegMode_col, drawCycle_col, displayPic_col, saveCyclePic_col, peaksUpward_col, testMode_col = st.columns(spec=7)
+    saveSegMode = saveSegMode_col.checkbox(t("save_segment_data"), value=True)
+    drawSegMode = drawSegMode_col.checkbox(t("draw_segment_data"), value=True)
+    drawCycle = drawCycle_col.checkbox(t("draw_cycle"), value=saveSegMode, disabled=not saveSegMode)
+    displayPic = displayPic_col.checkbox(t("display_cycle"), value=saveSegMode and drawCycle, disabled=not (saveSegMode and drawCycle))
+    saveCyclePic = saveCyclePic_col.checkbox(t("save_cycle"), value=saveSegMode and drawCycle, disabled=not (saveSegMode and drawCycle))
+    peaksUpward = peaksUpward_col.checkbox(t("peaks_upward"), value=False)
+    centerPeak = peaksUpward_col.checkbox(t("center_peak"), value=False)
+    testMode = testMode_col.checkbox(t("test_mode"), value=False, disabled=True)
+
+    leftSide_col, rightSide_col = st.columns(spec=2)
+    leftSide = leftSide_col.slider(label=t("left_boundary"), min_value=0.0, max_value=3.0, value=0.5, step=0.1)
+    rightSide = rightSide_col.slider(label=t("right_boundary"), min_value=0.0, max_value=3.0, value=0.5, step=0.1)
+    
+    avilible = any([saveSegMode, drawSegMode, drawCycle, saveCyclePic, displayPic])
+
+    if not avilible:
+        st.warning(t("select_at_least_one"))
+
+    # 初始化进度条和信息栏
+    progressBar_dsc = st.empty()
+    infoBar_dsc = st.empty()
+    
+    def progress_callback(progress: float, text: str):
+        progressBar_dsc.progress(progress, text)
+        
+    def info_callback(text: str):
+        infoBar_dsc.text(text)
+
+    dsc = AnalyzerClass(datadir=datapath_dsc, test_mode=testMode, save_seg_mode=saveSegMode, 
+                      draw_seg_mode=drawSegMode, draw_cycle=drawCycle, display_pic=displayPic, 
+                      save_cycle_pic=saveCyclePic, peaks_upward=peaksUpward, center_peak=centerPeak,
+                      left_length=leftSide, right_length=rightSide,
+                      progress_callback=progress_callback, info_callback=info_callback)
+    
+    # 画图设置
+    render_dsc_settings(dsc)
+    
+    run_col_dsc, infoBar_col_dsc, openDir_dsc_col, *_ = st.columns(spec=11)
+                      
+    if run_col_dsc.button(t("run"), key="run_col_dsc", disabled=not avilible):
+        task_start_time = time.time()
+        infoBar_dsc = infoBar_col_dsc.empty()
+        result_dsc = dsc.run()
+        infoBar_dsc.text(t("complete", time.time() - task_start_time))
+
+    if os.path.isdir(datapath_dsc):
+        if openDir_dsc_col.button(t("open_folder"), key="openDir_dsc_col"):
+            dsc.open_folder(dsc.rootdir)
+
+
+def render_dsc_settings(dsc: 'DSCAnalyzer') -> None:
+    """渲染DSC分析器的设置界面
+    
+    Args:
+        dsc: DSC分析器实例
+    """
+    picSet = st.expander(t("plot_settings"))
+   
+    with picSet:
+        # 第一行：绘图参数(前3个) + 配置管理(选择/删除)
+        curveColor_col, transparentBack_col, lineWidth_col, _, settingList_col, deleteSetting_col = st.columns(6)
+        
+        dsc.curve_color = curveColor_col.color_picker(t("curve_color"), value=dsc.curve_color, key="dsc_curveColor_col")
+        dsc.transparent_back = transparentBack_col.checkbox(t("transparent_background"), value=dsc.transparent_back, key="dsc_transparentBack_col")
+        dsc.line_width = lineWidth_col.slider(t("line_width"), key="dsc_lineWidth_col", min_value=0.2, max_value=3.0, step=0.1, value=dsc.line_width)
+        
+        dsc.setting_name = settingList_col.selectbox(t("settings_list"), dsc.setting_list(), key="dsc_settingList_col")
+        deleteSetting_col.button(t("delete_setting"), key="dsc_deleteSetting_col", on_click=dsc.delete_setting, args=[dsc.setting_name])
+        
+        # 第二行：绘图参数(后3个) + 配置管理(切换/保存)
+        axisWidth_col, titleFontSize_col, axisFontSize_col, switchSetting_col, settingname_col, saveSetting_col = st.columns(6)
+        
+        dsc.axis_width = axisWidth_col.slider(t("axis_width"), key="dsc_axisWidth_col", min_value=0.5, max_value=3.0, step=0.1, value=dsc.axis_width)
+        dsc.title_font_size = titleFontSize_col.slider(t("title_font_size"), key="dsc_titleFontSize_col", min_value=10, max_value=28, step=1, value=dsc.title_font_size)
+        dsc.axis_font_size = axisFontSize_col.slider(t("axis_font_size"), key="dsc_axisFontSize_col", min_value=8, max_value=24, step=1, value=dsc.axis_font_size)
+        
+        switchSetting_col.button(t("switch_setting"), key="dsc_switchSetting_col", on_click=dsc.change_setting, args=[dsc.setting_name])
+        newsettingname = settingname_col.text_input(t("setting_name"), key="dsc_saveRegion_col", value=dsc.setting_name)
+        saveSetting_col.button(t("save_setting"), key="dsc_saveSetting_col", on_click=dsc.save_setting, args=[newsettingname], disabled=(dsc.setting_name == newsettingname))
 
 
 def render_mw_settings(mw: 'MolecularWeightAnalyzer') -> None:
@@ -68,13 +164,13 @@ def render_mw_region_settings(mw: 'MolecularWeightAnalyzer') -> None:
         mw.selected_file = st.multiselect(t("file_list"), mw.read_file_list(), default=mw.read_file_list())
 
 
-def render_mw_ui(default_dir: str) -> None:
+def render_mw_ui(default_dir: str, AnalyzerClass: type) -> None:
     """渲染分子量分析UI标签页
     
     Args:
         default_dir: 默认数据目录
+        AnalyzerClass: 分子量分析器类
     """
-    from main import MolecularWeightAnalyzer
     
     datapath_mw = st.text_input(t("data_folder"), value=default_dir, max_chars=100, key="datapath_mw")
     if not os.path.isdir(datapath_mw):
@@ -94,7 +190,7 @@ def render_mw_ui(default_dir: str) -> None:
     def progress_callback(progress: float, text: str):
         progressBar_mw.progress(progress, text)
                 
-    mw = MolecularWeightAnalyzer(datapath_mw, save_picture=savePic_mw, display_picture=displayPic_mw, 
+    mw = AnalyzerClass(datapath_mw, save_picture=savePic_mw, display_picture=displayPic_mw, 
                                   test_mode=False, progress_callback=progress_callback)
     
     # 画图设置
@@ -113,22 +209,23 @@ def render_mw_ui(default_dir: str) -> None:
             st.warning(t("file_exists_warning"))
 
     if run_mw_col.button(t("run"), key="run_mw_col_mw", disabled=not overlayFile_mw):
+        task_start_time = time.time()
         infoBar_mw = infoBar_mw_col.empty()
         result_mw = mw.run()
-        infoBar_mw.text(t("complete", time.time() - start_time))
+        infoBar_mw.text(t("complete", time.time() - task_start_time))
 
     if os.path.isdir(datapath_mw):
         if openDir_mw_col.button(t("open_folder"), key="openDir_mw_col_mw"):
             mw.open_folder(mw.output_dir)
 
 
-def render_gpc_ui(default_dir: str) -> None:
+def render_gpc_ui(default_dir: str, AnalyzerClass: type) -> None:
     """渲染GPC分析UI标签页
     
     Args:
         default_dir: 默认数据目录
+        AnalyzerClass: GPC分析器类
     """
-    from main import GPCAnalyzer
     
     datapath_gpc = st.text_input(t("data_folder"), value=default_dir, max_chars=100, key="datapath_gpc")
     if not os.path.isdir(datapath_gpc):
@@ -157,7 +254,7 @@ def render_gpc_ui(default_dir: str) -> None:
     def info_callback(text: str):
         infoBar_gpc.text(text)
     
-    gpc = GPCAnalyzer(datapath_gpc, output_filename, save_file, save_picture, display_mode, 
+    gpc = AnalyzerClass(datapath_gpc, output_filename, save_file, save_picture, display_mode, 
                       save_figure_file_gpc, test_mode=False, 
                       progress_callback=progress_callback, info_callback=info_callback)
 
@@ -171,9 +268,10 @@ def render_gpc_ui(default_dir: str) -> None:
             st.warning(t("file_exists_warning"))  
 
     if run_gpc_col.button(t("run"), key="run_gpc_col", disabled=not overlayFile):
+        task_start_time = time.time()
         infoBar_gpc = infoBar_gpc_col.empty()
         result_gpc = gpc.run()
-        infoBar_gpc.text(t("complete", time.time() - start_time))
+        infoBar_gpc.text(t("complete", time.time() - task_start_time))
 
     if os.path.isdir(datapath_gpc):
         if openDir_gpc_col.button(t("open_folder"), key="openDir_gpc_col"):
@@ -189,6 +287,28 @@ def render_other_ui(default_dir: str) -> None:
     datapath_other = st.text_input(t("data_folder"), value=default_dir, max_chars=100, key="datapath_other")
     if os.path.isdir(datapath_other):
         clear_confirm = st.checkbox(t("clean_folder"), value=False)
+        if st.button(t("run_clean"), disabled=not clear_confirm):
+            root_dir = os.getcwd()
+            folders_to_clean = ["Mw_output", "GPC_output", "DSC_Cycle", "DSC_Pic"]
+            
+            for folder in folders_to_clean:
+                folder_path = os.path.join(root_dir, folder)
+                if os.path.exists(folder_path):
+                    try:
+                        # 清空文件夹内容但保留文件夹本身
+                        for filename in os.listdir(folder_path):
+                            file_path = os.path.join(folder_path, filename)
+                            try:
+                                if os.path.isfile(file_path) or os.path.islink(file_path):
+                                    os.unlink(file_path)
+                                elif os.path.isdir(file_path):
+                                    shutil.rmtree(file_path)
+                            except Exception as e:
+                                st.error(f"Failed to delete {file_path}. Reason: {e}")
+                    except Exception as e:
+                        st.error(f"Error cleaning {folder_path}: {e}")
+            
+            st.success(t("clean_success"))
     else:
         st.warning(t("invalid_path"))
 
@@ -225,8 +345,14 @@ def render_sidebar() -> None:
             st.markdown(t("contact_info"))
 
 
-def render_app() -> None:
-    """渲染完整的应用UI"""
+def render_app(DSCAnalyzerClass: type, GPCAnalyzerClass: type, MolecularWeightAnalyzerClass: type) -> None:
+    """渲染完整的应用UI
+    
+    Args:
+        DSCAnalyzerClass: DSC分析器类
+        GPCAnalyzerClass: GPC分析器类
+        MolecularWeightAnalyzerClass: 分子量分析器类
+    """
     # 配置页面
     st.set_page_config(
         page_title=t("app_title"),
@@ -239,13 +365,16 @@ def render_app() -> None:
     default_dir = os.path.join(os.getcwd(), "datapath")
     
     # 创建标签页
-    Mw_ui, gpc_ui, other_ui = st.tabs([t("tab_mw"), t("tab_gpc"), t("tab_other")])
-    
-    with Mw_ui:
-        render_mw_ui(default_dir)
+    gpc_ui, Mw_ui, dsc_ui, other_ui = st.tabs([t("tab_gpc"), t("tab_mw"), t("tab_dsc"), t("tab_other")])
     
     with gpc_ui:
-        render_gpc_ui(default_dir)
+        render_gpc_ui(default_dir, GPCAnalyzerClass)
+    
+    with Mw_ui:
+        render_mw_ui(default_dir, MolecularWeightAnalyzerClass)
+
+    with dsc_ui:
+        render_dsc_ui(default_dir, DSCAnalyzerClass)
     
     with other_ui:
         render_other_ui(default_dir)
@@ -255,10 +384,12 @@ def render_app() -> None:
 
 
 # 导出全局变量供main.py使用
-__all__ = ['render_app', 'progressBar_mw', 'infoBar_mw', 'progressBar_gpc', 'infoBar_gpc', 'start_time']
+__all__ = ['render_app', 'progressBar_mw', 'infoBar_mw', 'progressBar_gpc', 'infoBar_gpc', 'progressBar_dsc', 'infoBar_dsc']
 
 # 这些变量需要在main.py中访问
 progressBar_mw = None
 infoBar_mw = None
 progressBar_gpc = None
 infoBar_gpc = None
+progressBar_dsc = None
+infoBar_dsc = None

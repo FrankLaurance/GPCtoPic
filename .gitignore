@@ -19,10 +19,14 @@ build/
 # Data files - GPC analysis data
 *.rst
 datapath/*.rst
+datapath/*.txt
+
 
 # Output directories
 Mw_output/
 GPC_output/
+DSC_Cycle/
+DSC_Pic/
 
 # Logs
 logs/

@@ -33,8 +33,25 @@ TRANSLATIONS = {
         # 标签页
         "tab_mw": "Mw",
         "tab_gpc": "GPC",
+        "tab_dsc": "DSC",
         "tab_other": "其他",
         
+        # DSC
+        "save_segment_data": "保存分段数据",
+        "draw_segment_data": "绘制分段曲线",
+        "draw_cycle": "绘制循环对比图",
+        "display_cycle": "显示对比图",
+        "save_cycle": "保存对比图",
+        "peaks_upward": "峰始终向上",
+        "center_peak": "峰居中",
+        "fit_segment_data": "拟合各片段数据",
+        "fit_segment_data_ml": "拟合各片段数据（机器学习）",
+        "test_mode": "测试模式",
+        "left_boundary": "左边界/min",
+        "right_boundary": "右边界/min",
+        "peak_prominence": "峰突出程度",
+        "select_at_least_one": "至少选择一个项目",
+
         # 文件和路径
         "data_folder": "数据文件夹",
         "output_filename": "输出文件名",
@@ -48,6 +65,7 @@ TRANSLATIONS = {
         "plot_settings": "画图设置",
         "bar_color": "柱状图颜色选择",
         "mw_color": "分子量分布颜色选择",
+        "curve_color": "曲线颜色选择",
         "transparent_background": "透明背景",
         "draw_bar": "绘制柱状图",
         "draw_mw": "绘制Mw曲线",
@@ -79,6 +97,8 @@ TRANSLATIONS = {
         
         # 其他功能
         "clean_folder": "清理文件夹",
+        "run_clean": "执行清理",
+        "clean_success": "清理完成",
         "unsupported_os": "不支持的操作系统",
         "cannot_open_folder": "无法打开文件夹: {}",
         
@@ -104,8 +124,25 @@ TRANSLATIONS = {
         # Tabs
         "tab_mw": "Mw",
         "tab_gpc": "GPC",
+        "tab_dsc": "DSC",
         "tab_other": "Other",
         
+        # DSC
+        "save_segment_data": "Save Segment Data",
+        "draw_segment_data": "Draw Segment Curve",
+        "draw_cycle": "Draw Cycle Comparison",
+        "display_cycle": "Display Comparison",
+        "save_cycle": "Save Comparison",
+        "peaks_upward": "Peaks Always Upward",
+        "center_peak": "Center Peak",
+        "fit_segment_data": "Fit Segment Data",
+        "fit_segment_data_ml": "Fit Segment Data (ML)",
+        "test_mode": "Test Mode",
+        "left_boundary": "Left Boundary (min)",
+        "right_boundary": "Right Boundary (min)",
+        "peak_prominence": "Peak Prominence",
+        "select_at_least_one": "Select at least one item",
+
         # Files and Paths
         "data_folder": "Data Folder",
         "output_filename": "Output Filename",
@@ -119,6 +156,7 @@ TRANSLATIONS = {
         "plot_settings": "Plot Settings",
         "bar_color": "Bar Chart Color",
         "mw_color": "Molecular Weight Color",
+        "curve_color": "Curve Color",
         "transparent_background": "Transparent Background",
         "draw_bar": "Draw Bar Chart",
         "draw_mw": "Draw Mw Curve",
@@ -150,6 +188,8 @@ TRANSLATIONS = {
         
         # Other Functions
         "clean_folder": "Clean Folder",
+        "run_clean": "Run Clean",
+        "clean_success": "Clean Completed",
         "unsupported_os": "Unsupported Operating System",
         "cannot_open_folder": "Cannot open folder: {}",
         
