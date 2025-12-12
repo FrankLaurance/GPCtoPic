@@ -48,6 +48,18 @@ A professional data analysis and visualization tool for polymer materials, integ
 - ✅ Uninstall by simply deleting the folder
 - ✅ Offline usage supported, data security guaranteed
 
+#### Version Upgrade:
+If you are already using an older version, upgrading is very simple:
+1. Download the new version `PolyAnalyzer_Windows_Portable_vX.X.X.zip` and extract to the **same directory** (side by side with the old version folder)
+2. Double-click `Upgrade.bat` in the new version folder
+3. The script will automatically:
+   - Detect and identify the old version folder
+   - Copy your user data (datapath, GPC_output, Mw_output, setting, logs)
+   - Clean up the old version folder
+4. After the upgrade completes, you can use the new version
+
+> 💡 **Tip:** The old version will be automatically backed up to a `.backup` folder before upgrade to ensure data safety
+
 ### Method 2: Run from Source Code (Developers & Technical Users)
 
 **Target Users: Developers, Users Needing Customization, Cross-platform Usage**

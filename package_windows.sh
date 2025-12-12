@@ -147,6 +147,7 @@ cp requirements.txt "$OUTPUT_DIR/$PACKAGE_NAME/"
 cp README.md "$OUTPUT_DIR/$PACKAGE_NAME/"
 cp README_EN.md "$OUTPUT_DIR/$PACKAGE_NAME/"
 cp LICENSE "$OUTPUT_DIR/$PACKAGE_NAME/" 2>/dev/null || true
+cp Upgrade.bat "$OUTPUT_DIR/$PACKAGE_NAME/" 2>/dev/null || echo "Warning: Upgrade.bat not found"
 
 # 复制必要的目录
 cp -r setting "$OUTPUT_DIR/$PACKAGE_NAME/"
@@ -582,10 +583,57 @@ PolyAnalyzer Windows 便携版使用说明
 - GPC 结果：GPC_output 文件夹
 - 分子量结果：Mw_output 文件夹
 
-5. 常见问题
+5. 版本升级
+-----------
+如果您已经在使用旧版本，升级非常简单：
+1. 下载新版本并解压到与旧版本相同的目录
+2. 双击新版本文件夹中的 "Upgrade.bat"
+3. 脚本会自动复制您的数据并清理旧版本
+
+注意：升级前会自动备份旧版本到 .backup 文件夹
+
+6. 常见问题
 -----------
 - 如果浏览器未自动打开，请手动访问：http://localhost:8501
 - 关闭黑色命令行窗口即可退出程序。
+EOF
+
+# 创建英文使用说明
+cat > "$OUTPUT_DIR/$PACKAGE_NAME/USER_GUIDE_EN.txt" << 'EOF'
+PolyAnalyzer Windows Portable Version User Guide
+================================================
+
+1. First Time Use
+-----------------
+Double-click "install_dependencies.bat" to install dependencies (requires internet, only run once).
+
+2. Start Application
+--------------------
+Double-click "Start_App.bat" to start the application.
+
+3. How to Use
+-------------
+- Place .rst data files in the datapath folder.
+- Select files and run analysis in the web interface.
+
+4. View Results
+---------------
+- GPC results: GPC_output folder
+- Molecular weight results: Mw_output folder
+
+5. Version Upgrade
+------------------
+If you are already using an older version, upgrading is simple:
+1. Download the new version and extract to the same directory as the old version
+2. Double-click "Upgrade.bat" in the new version folder
+3. The script will automatically copy your data and clean up the old version
+
+Note: The old version will be automatically backed up to .backup folder before upgrade
+
+6. Troubleshooting
+------------------
+- If browser doesn't open automatically, visit: http://localhost:8501
+- Close the black command window to exit the program.
 EOF
 
 # 压缩打包

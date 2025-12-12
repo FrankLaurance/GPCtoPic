@@ -22,7 +22,7 @@ import chardet
 os.environ['MPLBACKEND'] = 'Agg'
 
 # 常量定义 - 默认设置
-APP_VERSION = "1.1.1"
+APP_VERSION = "1.1.2"
 DEFAULT_BAR_COLOR = "#002FA7"
 DEFAULT_MW_COLOR = "#FF6A07"
 DEFAULT_SETTING_NAME = "defaultSetting.ini"
